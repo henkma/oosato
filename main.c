@@ -6,109 +6,110 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <locale.h>
 
 #include "defines.h"
 #include "types.h"
 #include "prop.h"
 
-/* �ץ��ȥ�������� */
+/* プロトタイプ宣言 */
 static void PrintHighScore( void );
 static void NewScore(int score);
 
-static int atom[ATOM_MAX]; /* ����̿������� */
-static char atomstr_ga[ATOM_MAX][STRLENMAX]; /* ����֤��פ�Ȥ�ʸ����*/
-static char atomstr_ha[ATOM_MAX][STRLENMAX]; /* ����֤ϡפ�Ȥ�ʸ����*/
-static char negatomstr_ga[ATOM_MAX][STRLENMAX]; /* �֤��������� */
-static char negatomstr_ha[ATOM_MAX][STRLENMAX]; /* �֤ϡ������� */
+static int atom[ATOM_MAX]; /* 原子命題の配列 */
+static char atomstr_ga[ATOM_MAX][STRLENMAX]; /* 助詞「が」を使う文字列*/
+static char atomstr_ha[ATOM_MAX][STRLENMAX]; /* 助詞「は」を使う文字列*/
+static char negatomstr_ga[ATOM_MAX][STRLENMAX]; /* 「が」否定版 */
+static char negatomstr_ha[ATOM_MAX][STRLENMAX]; /* 「は」否定版 */
 
-/* ����̿��ʸ����ꥹ�������� */
+/* 原子命題文字列リスト用配列 */
 typedef struct AtomString {
-  char* subj; /* ��� */
-  char* pred; /* �Ҹ� */
-  char* neg_pred; /* ����Ҹ� */
+  char* subj; /* 主語 */
+  char* pred; /* 述語 */
+  char* neg_pred; /* 否定述語 */
 }AtomString;
 
-/* ����̿��ʸ����ꥹ��. 
-   ��ʸ����϶����Х���+'\0'�Ǥʤ���Фʤ�ʤ�. 
-   ʸ����Ĺ������������ɽ���ΰ褬­��ʤ��ʤ�ΤǤۤɤۤɤ�.
+/* 原子命題文字列リスト. 
+   各文字列は偶数バイト+'\0'でなければならない. 
+   文字列が長すぎると選択肢表示領域が足りなくなるのでほどほどに.
 */
 static AtomString as_list[] = {
-  {"��Τ����δ�", "�֤�", "�֤��ʤ�"},
-  {"��Τ����", "��äƤ���", "����դǤ���"},
-  {"��Τ����", "���򤷤Ƥ���", "���򤷤Ƥ��ʤ�"},
-  {"��Τ�������", "���줷�Ƥ���", "���줷�Ƥ��ʤ�"},
-  {"��Τ����", "�ۤäƤ���", "���äƤ���"}, //5
+  {"大里くんの顔", "赤い", "赤くない"},
+  {"大里くん", "酔っている", "シラフである"},
+  {"大里くん", "恋をしている", "恋をしていない"},
+  {"大里くんの目", "充血している", "充血していない"},
+  {"大里くん", "黙っている", "喋っている"}, //5
 
-  {"��Τ����", "�������Ǥ���", "�������ǤϤʤ�"},
-  {"��Τ����", "�ФäƤ���", "�ФäƤ��ʤ�"},
-  {"��Τ����", "̲�äƤ���", "�����Ƥ���"},
-  {"��Τ����", "�ܤ򳫤��Ƥ���", "�ܤ��Ĥ��Ƥ���"},
-  {"��Τ����", "�ٶ����Ƥ���", "�ٶ����Ƥ��ʤ�"}, //10
+  {"大里くん", "小学生である", "小学生ではない"},
+  {"大里くん", "笑っている", "笑っていない"},
+  {"大里くん", "眠っている", "起きている"},
+  {"大里くん", "目を開けている", "目を閉じている"},
+  {"大里くん", "勉強している", "勉強していない"}, //10
 
-  {"��Τ����", "���������Ƥ���", "�����Ĥ��Ƥ���"},
-  {"���α���", "���äƤ���", "���äƤ��ʤ�"},
-  {"���α���", "ӹ�äƤ���", "ӹ�äƤ��ʤ�"},
-  {"���ޤ�","�����ܤ餻��","�����ܤ餻�Ƥ��ʤ�"},
-  {"���ޤ�","�餱�Ƥ���","���äƤ���"}, //15
+  {"大里くん", "うろたえている", "おちついている"},
+  {"俺の右手", "光っている", "光っていない"},
+  {"俺の右手", "唸っている", "唸っていない"},
+  {"おまえ","俺を怒らせた","俺を怒らせていない"},
+  {"おまえ","負けている","勝っている"}, //15
 
-  {"�����δ�", "�֤�", "�֤��ʤ�"},
-  {"����", "��äƤ���", "����դǤ���"},
-  {"����", "���򤷤Ƥ���", "���򤷤Ƥ��ʤ�"},
-  {"��������", "���줷�Ƥ���", "���줷�Ƥ��ʤ�"},
-  {"����", "�ۤäƤ���", "���äƤ���"}, //20
+  {"少女の顔", "赤い", "赤くない"},
+  {"少女", "酔っている", "シラフである"},
+  {"少女", "恋をしている", "恋をしていない"},
+  {"少女の目", "充血している", "充血していない"},
+  {"少女", "黙っている", "喋っている"}, //20
 
-  {"����", "�������Ǥ���", "�������ǤϤʤ�"},
-  {"����", "�ФäƤ���", "�ФäƤ��ʤ�"},
-  {"����", "̲�äƤ���", "�����Ƥ���"},
-  {"����", "�ܤ򳫤��Ƥ���", "�ܤ��Ĥ��Ƥ���"},
-  {"����", "�ٶ����Ƥ���", "�ٶ����Ƥ��ʤ�"}, //25
+  {"少女", "小学生である", "小学生ではない"},
+  {"少女", "笑っている", "笑っていない"},
+  {"少女", "眠っている", "起きている"},
+  {"少女", "目を開けている", "目を閉じている"},
+  {"少女", "勉強している", "勉強していない"}, //25
 
-  {"����", "���������Ƥ���", "�����Ĥ��Ƥ���"},
-  {"��","�����֤��������","�����֤�������Фʤ�"},
-  {"���ޤ�","���ޤǿ��ä��ѥ�������Ф��Ƥ���","���ޤǿ��ä��ѥ�������Ф��Ƥ��ʤ�"},
-  {"���ޤ�","�⤦���Ǥ���","�ޤ����Ǥ��ʤ�"},
-  {"�ҥ�Ĺ���������˾�����","�ʤ�","����"}, //30
+  {"少女", "うろたえている", "おちついている"},
+  {"俺","この赤の扉を選ぶ","この赤の扉を選ばない"},
+  {"おまえ","今まで食ったパンの枚数を覚えている","今まで食ったパンの枚数を覚えていない"},
+  {"おまえ","もう死んでいる","まだ死んでいない"},
+  {"ヒゲ長き小学生に勝るもの","ない","ある"}, //30
 
-  {"��Τ�����ȱ","Ĺ��","û��"},
-  {"������ȱ","Ĺ��","û��"},
-  {"����","Ŭ�ڤʽ����Ǥ���","Ŭ�ڤʽ����Ǥʤ�"},
-  {"��","�᤯","�ᤫ�ʤ�"},
-  {"����","�٤���","�٤���ʤ�"},//35
+  {"大里くんの髪","長い","短い"},
+  {"少女の髪","長い","短い"},
+  {"爆破","適切な処理である","適切な処理でない"},
+  {"風","吹く","吹かない"},
+  {"桶屋","儲かる","儲からない"},//35
 
-  {"ǤŷƲ","�ƥȥꥹ���ä�","�ƥȥꥹ���äƤʤ�"},
-  {"����","����ॹ���ä�","����ॹ���äƤʤ�"},
-  {"���Ի�","��ž�֤�ű���","��ž�֤�ű��ʤ�"},
-  {"�ӡ���","���ޤ�","�ޤ���"},
-  {"���ޤ�","���ޤǤ���","���ޤǤʤ�"},//40
+  {"任天堂","テトリスを作った","テトリスを作ってない"},
+  {"セガ","コラムスを作った","コラムスを作ってない"},
+  {"京都市","自転車を撤去する","自転車を撤去しない"},
+  {"ビール","うまい","まずい"},
+  {"おまえ","辛党である","辛党でない"},//40
 
-  {"�ͤ�Ƭ","�����Τ��󤳤Ĥ��Ǥ�","�����Τ��󤳤Ĥ����餫��"},
-  {"�ڥ�","����궯��","�����夤"},
-  {"����","����","�餱��"},
-  {"��Τ����","�ᥤ�ɤǤ���","�ᥤ�ɤǤʤ�"},
-  {"����","�ᥤ�ɤǤ���","�ᥤ�ɤǤʤ�"},//45
+  {"僕の頭","親方のげんこつより固い","親方のげんこつよりやわらかい"},
+  {"ペン","剣より強い","剣より弱い"},
+  {"正義","勝つ","負ける"},
+  {"大里くん","メイドである","メイドでない"},
+  {"少女","メイドである","メイドでない"},//45
 
-  {"���ʤ���̾��","�ָ����ȥ���פǤ���","�ָ����ȥ���פǤʤ�"},
+  {"あなたの名前","「公衆トイレ」である","「公衆トイレ」でない"},
 };
-#define ATOMSTRING_MAX 46 /* ��������������ǿ� */
+#define ATOMSTRING_MAX 46 /* ↑この配列の要素数 */
 
-Prop Condition[CONDITION_MAX]; /* ����������� */
+Prop Condition[CONDITION_MAX]; /* 前提条件の配列 */
 
-static char ConditionAtom[ATOM_MAX]; /* ��ɾ�������� */
+static char ConditionAtom[ATOM_MAX]; /* 式評価用配列 */
 
-static int Problem_num; /* ���߽��꤬��λ���Ƥ�������� */
-static int Correct_num; /* ����������������ο� */
+static int Problem_num; /* 現在出題が終了している問題数 */
+static int Correct_num; /* 現在正答した問題の数 */
 
-static int ScoreSum; /* ������ */
+static int ScoreSum; /* スコア */
 
-/* ������� */
+/* 難易度用 */
 static int Difficulty_num_list[3][10]
 = {{ 2,2,2,2,2, 2,2,2,2,2 },
    { 2,2,2,3,3, 3,4,4,5,5 },
    { 3,3,3,4,4, 4,5,5,5,5 }};
 static int Num_Smax_list[6] = {0,0,50000,200000,500000,600000};
-static int Difficulty=0; /* ����� */
+static int Difficulty=0; /* 難易度 */
 
-/* �ϥ��������� */
+/* ハイスコア用 */
 static int HighScore[10];
 static char ScoreName[10][4];
 
@@ -118,19 +119,19 @@ static int mygetch( void )
   fd_set fds_set;
   struct timeval exittime;
 
-  /* �Ԥ����֤����� */
+  /* 待ち時間の設定 */
   exittime.tv_usec = 0;
   exittime.tv_sec = 600;
   //  exittime.tv_sec = 20;
   
-  /* �ǥ�������ץ��������� */
+  /* ディスクリプタ集合設定 */
   FD_ZERO(&fds_set);
   FD_SET(0,&fds_set);
     
-  /* ���쥯�� */
+  /* セレクト */
   while(select(1,&fds_set,NULL,NULL,&exittime) == -1);
 
-  /* �����ॢ���Ȥˤ�뽪λ */
+  /* タイムアウトによる終了 */
   if(!(FD_ISSET(0,&fds_set))){
     if((rand()%10 ==0))PrintHighScore();
     endwin();
@@ -153,23 +154,23 @@ static int mygetch( void )
 }
 
 
-/* ������̿�����ä�, ������б����� ����֤��פ�ʸ�ؤΥݥ��󥿤��֤� */
+/* 小さい命題をもらって, それに対応する 助詞「が」の文へのポインタを返す */
 static char* prim2str_ga(Prim arg)
 {
   if(arg.sign == 1)return atomstr_ga[arg.atom];
   return negatomstr_ga[arg.atom];
 }
 
-/* ������̿�����ä�, ������б����� ����֤ϡפ�ʸ�ؤΥݥ��󥿤��֤� */
+/* 小さい命題をもらって, それに対応する 助詞「は」の文へのポインタを返す */
 static char* prim2str_ha(Prim arg)
 {
   if(arg.sign == 1)return atomstr_ha[arg.atom];
   return negatomstr_ha[arg.atom];
 }
 
-/* ����̿���win�κ�ɸy,x����ɽ������. ����, ��§������Ԥ�. 
-   �� refresh�Ϥ��ʤ�. 
-   �� "�֡�", "�֡�", "�֡�"�η������ꤷ�Ƥ��ʤ�. (�Ȥ��Ȼפ���) */
+/* 前提命題をwinの座標y,xから表示する. 改行, 禁則処理を行う. 
+   ※ refreshはしない. 
+   ※ "「。", "「、", "「」"の形は想定していない. (使わんと思うし) */
 static void mymvwprintw(WINDOW* win, int y, int x, char* str)
 {
   int len;
@@ -178,29 +179,29 @@ static void mymvwprintw(WINDOW* win, int y, int x, char* str)
 
   len = strlen(str);
 
-  if(len < 77){
+  if(len < 115){
     mvwprintw(win,y,x,str);
     return;
   }
 
-  /* ��ʸ��¿���ʤ��§���� */
-  if( !strncmp("��",str+77,2) || 
-      !strncmp("��",str+77,2) ||
-      !strncmp("��",str+77,2) )kinsoku=2;
+  /* 一文字多くなる禁則処理 */
+  if( !strncmp("。",str+115,3) || 
+      !strncmp("、",str+115,3) ||
+      !strncmp("」",str+115,3) )kinsoku=3;
 
-  /* ��ʸ�������ʤ��§���� */
-  if( !strncmp("��",str+75,2) )kinsoku=-2;
+  /* 一文字少くなる禁則処理 */
+  if( !strncmp("「",str+115,3) )kinsoku=-3;
 
-  strncpy(buff, str, 77+kinsoku);
-  buff[77+kinsoku]='\0';
+  strncpy(buff, str, 115+kinsoku);
+  buff[115+kinsoku]='\0';
   mvwprintw(win,y,x,buff);
-  mvwprintw(win,y+1,x+3,str+77+kinsoku);
+  mvwprintw(win,y+1,x+3,str+115+kinsoku);
 
   return;
 }
 
-/* ����̿�����̤˽��Ϥ���. 
-   �إܤ����ԡ���§����������äƤ��ʤ��Τ�, ʸ����������. */
+/* 前提命題を画面に出力する. 
+   ヘボい改行・禁則処理しか作っていないので, 文字数に注意. */
 static void print_condition(int arg)
 {
   char buff[STRLENMAX];
@@ -208,26 +209,26 @@ static void print_condition(int arg)
   switch(Condition[arg].proptype){
   case A_IMP_B:
     sprintf(buff, 
-	    "�� %s�Ȥ���%s��\n", 
+	    "・ %sとき、%s。\n", 
 	    prim2str_ga(Condition[arg].first),
 	    prim2str_ha(Condition[arg].second));
     break;
   case A_OR_B:
     sprintf(buff, 
-	    "�� %s�� �ޤ��� %s��\n", 
+	    "・ %s、 または %s。\n", 
 	    prim2str_ha(Condition[arg].first),
 	    prim2str_ha(Condition[arg].second));
     break;
   case A_AND_B_IMP_C:
     sprintf(buff, 
-	    "�� %s�Ȥ��ǡ�������%s�Ȥ���%s��\n", 
+	    "・ %sときで、しかも%sとき、%s。\n", 
 	    prim2str_ga(Condition[arg].first),
 	    prim2str_ga(Condition[arg].second),
 	    prim2str_ha(Condition[arg].third));
     break;
   case A_OR_B_IMP_C:
     sprintf(buff, 
-	    "�� %s���ޤ���%s�Ȥ���%s��\n", 
+	    "・ %s、または%sとき、%s。\n", 
 	    prim2str_ga(Condition[arg].first),
 	    prim2str_ga(Condition[arg].second),
 	    prim2str_ha(Condition[arg].third));
@@ -238,9 +239,9 @@ static void print_condition(int arg)
   return;
 }
 
-/* �����Τ��������������� */
+/* 解答のための選択肢用配列 */
 static int Alternative[ATOM_MAX];
-/* �����Τ����������������ɽ��. realvalue��true�ʤ鿧���դ���. */
+/* 解答のための選択肢用配列の表示. realvalueがtrueなら色を付ける. */
 static int printalternative( int idx, int conditionnum, int locate, int realvalue)
 {
   int i;
@@ -255,25 +256,25 @@ static int printalternative( int idx, int conditionnum, int locate, int realvalu
     wattron(stdscr, COLOR_PAIR(1));
     switch(realvalue){
     case ONLY_TRUE:
-      mvwprintw(stdscr, locate, 2 , "[!][ ][ ] %s��", atomstr_ha[idx]);
+      mvwprintw(stdscr, locate, 2 , "[!][ ][ ] %s。", atomstr_ha[idx]);
       break;
     case ONLY_FALSE:
-      mvwprintw(stdscr, locate, 2 , "[ ][!][ ] %s��", atomstr_ha[idx]);
+      mvwprintw(stdscr, locate, 2 , "[ ][!][ ] %s。", atomstr_ha[idx]);
       break;
     case ANYWAY:
-      mvwprintw(stdscr, locate, 2 , "[ ][ ][!] %s��", atomstr_ha[idx]);
+      mvwprintw(stdscr, locate, 2 , "[ ][ ][!] %s。", atomstr_ha[idx]);
       break;
     }
     wattroff(stdscr, COLOR_PAIR(1));
   }
   else 
-    mvwprintw(stdscr, locate, 2 , "[ ][ ][ ] %s��", atomstr_ha[idx]);
+    mvwprintw(stdscr, locate, 2 , "[ ][ ][ ] %s。", atomstr_ha[idx]);
   Alternative[locate-14]=idx;
 
   return 1;
 }
 
-/* ����(����)���֤β�����ɽ�� */
+/* 選択(途中)状態の回答欄表示 */
 static void printchoice(int* choice, int x , int y , int low)
 {
   int i;
@@ -293,7 +294,7 @@ static void printchoice(int* choice, int x , int y , int low)
       break;
     }
   }
-  mvwprintw(stdscr, 19, 2, "[ ]����");
+  mvwprintw(stdscr, 19, 2, "[ ]決定");
   mvwprintw(stdscr, y,x,"*");
   wrefresh(stdscr);
 }
@@ -366,26 +367,26 @@ static void PrintHint(char boolatom, int atomidx,
   char* negboolstr;
   
   if(boolatom == ONLY_TRUE){
-    boolstr="��";
-    negboolstr="��";
+    boolstr="真";
+    negboolstr="偽";
   }
-  else { /* �����Ǥ�ɬ�� boolatom == ONLY_FALSE */
-    boolstr="��";
-    negboolstr="��";
+  else { /* ここでは必ず boolatom == ONLY_FALSE */
+    boolstr="偽";
+    negboolstr="真";
   }
   
-  /* Ŭ���˾ä� */
+  /* 適当に消す */
   for( i=14 ; i < 22 ; i++)
     mvwprintw(stdscr, i,0,"                                                                              ");
   wrefresh(stdscr);
   
-  mvwprintw(stdscr, 15, 2,"��%s�פ�%s�Ȳ��ꤷ�ޤ���", 
+  mvwprintw(stdscr, 15, 2,"「%s」が%sと仮定します。", 
 	    atomstr_ha[atomidx], negboolstr);
-  mvwprintw(stdscr, 16, 2,"�����");
+  mvwprintw(stdscr, 16, 2,"すると");
   for( i = 0 ; i < ex_prop_num ; i++)
-    wprintw(stdscr, "��%2d����", extracted[i]+1);
-  wprintw(stdscr, "��̷�⤷�ޤ���");
-  mvwprintw(stdscr, 17, 2,"�������äơ�%s�פ�%s�Ǥ���", 
+    wprintw(stdscr, "、%2d番目", extracted[i]+1);
+  wprintw(stdscr, "が矛盾します。");
+  mvwprintw(stdscr, 17, 2,"したがって「%s」は%sです。", 
 	    atomstr_ha[atomidx], boolstr);
 
   wrefresh(stdscr);
@@ -393,15 +394,15 @@ static void PrintHint(char boolatom, int atomidx,
   return;
 }
 
-/* ̿�����Ф���. ��Ū�ο���Ф�����, ���������뤫�ͤ���, ��������1���֤�.
-   ��������ʤ��Ȥ���0���֤�. */
+/* 命題を抽出する. 目的の数抽出したら, 何か言えるか考えて, 言えたら1を返す.
+   何も言えないときは0を返す. */
 static int Hint_aux( int prop_max, int* extracted, 
 		      int prop_min, int ex_prop_num, int depth )
 {
   int i;
 
   if(depth == 0){
-    /* �����Ǥ�ͽ�ꤵ�줿����̿�꤬��Ф���Ƥ��� */
+    /* ここでは予定された数の命題が抽出されている */
     char boolatom[ATOM_MAX];
     Prop ex_prop[CONDITION_MAX];
 
@@ -412,7 +413,7 @@ static int Hint_aux( int prop_max, int* extracted,
     get_answer(boolatom);
     for(i=0; i < ATOM_MAX ; i++){
       if( boolatom[i] == ONLY_TRUE || boolatom[i] == ONLY_FALSE ){
-	/* �������ȯ���� */
+	/* 確定事項発見！ */
 	PrintHint(boolatom[i],i,extracted,ex_prop_num);
 	return 1;
       }
@@ -420,26 +421,26 @@ static int Hint_aux( int prop_max, int* extracted,
     return 0;
   }
 
-  /* �⤦������ */
+  /* もう一つ抽出 */
   for( i = prop_min ; i < prop_max ; i++){
     extracted[ex_prop_num]=i;
     if(Hint_aux(prop_max, extracted, i+1, ex_prop_num+1, depth-1)){
-      /* ���������Ǥ�����1���֤� */
+      /* 何か説明できたら1を返す */
       return 1;
     }
   }
 
   return 0;
 }
-/* �ץ쥤�䤬�ְ�ä��Ȥ�, ��ˡ�Υҥ�Ȥ�Ф�����δؿ� 
-   num������̿��ο�. */
+/* プレイヤが間違ったとき, 解法のヒントを出すための関数 
+   numは前提命題の数. */
 static void Hint( int num )
 {
   int depth;
   int extracted[CONDITION_MAX];
   
   for( depth = 2 ; depth < num+1 ; depth ++ ){
-    if( Hint_aux(num,extracted,0,0,depth) )return; /* ���������Ǥ����齪λ */
+    if( Hint_aux(num,extracted,0,0,depth) )return; /* 何か説明できたら終了 */
   }
   return; /* cannot reach */
 }
@@ -455,29 +456,29 @@ static int mainloop( void )
   num = Difficulty_num_list[Difficulty][Problem_num];
   scoremax = Num_Smax_list[num];
 
-  make_question(num,Condition); /* ������� */
-  make_answer(num,Condition); /* �������� */
+  make_question(num,Condition); /* 問題作成 */
+  make_answer(num,Condition); /* 解答作成 */
   get_answer(ConditionAtom);
 
-  /* ���������å� */
+  /* 解答チェック */
   tmp = 0;
   for( i = 0 ; i < ATOM_MAX ; i++ )
     if( ConditionAtom[i] == ONLY_TRUE || ConditionAtom[i] == ONLY_FALSE )
       tmp ++;
 
-  /* ��������������, �⤷�������꼫�Τ�̷�⤷�Ƥ���Ȥ��Ϥ��ľ��. */
+  /* 解答が全部不定, もしくは問題自体が矛盾しているときはやり直し. */
   if( tmp == 0 )return mainloop();
-  /* ��ĻĤ�������ΤȤ���7/10�Ǥ��ľ��. */
+  /* 一個残して不定のときは7/10でやり直し. */
   if( tmp == 1 && (rand() % 10 < 7) )return mainloop();
 
-  mvwprintw(stdscr, 0, 15, "��10��, ��%2d��           ������%07d          ����/���� : %d/%2d", Problem_num+1, ScoreSum, Correct_num, Problem_num);
+  mvwprintw(stdscr, 0, 15, "全10題, 第%2d題           点数：%07d          正答/出題 : %d/%2d", Problem_num+1, ScoreSum, Correct_num, Problem_num);
 
   for( i = 0 ; i < num ; i++ ){
     print_condition(i);
   }
 
-  mvwprintw(stdscr, 12, 2, "Ŭ�ڤʤ�Τ˥ޡ�������, ����򲡤��Ʋ�������");
-  mvwprintw(stdscr, 13, 2, "�� �� ����");
+  mvwprintw(stdscr, 12, 2, "適切なものにマークして, 決定を押して下さい。");
+  mvwprintw(stdscr, 13, 2, "真 偽 不定");
   
   locate = 14;
   for( i = 0 ; i < ATOM_MAX ; i++ ){
@@ -507,19 +508,19 @@ static int mainloop( void )
       }
     }
     if(ok) {
-      mvwprintw(stdscr, 19, 2, "����");
+      mvwprintw(stdscr, 19, 2, "正解！");
       Correct_num ++;
       localscore = scoremax/((int)time(NULL) - time_begin +10);
       localscore ++;
-      mvwprintw(stdscr, 20, 2, "������%6d", localscore);
+      mvwprintw(stdscr, 20, 2, "得点：%6d", localscore);
       ScoreSum += localscore;
     }
     else {
       int c;
 
-      mvwprintw(stdscr, 19, 2, "��ǰ��");
+      mvwprintw(stdscr, 19, 2, "残念！");
       mvwprintw(stdscr, 21, 2, 
-		"��ˡ�Υҥ�Ȥ��ɤߤޤ�����[Y/N]");
+		"解法のヒントを読みますか？[Y/N]");
       wrefresh(stdscr);
       while(1){
 	c = mygetch();
@@ -530,7 +531,7 @@ static int mainloop( void )
 	}
       }
     }
-    mvwprintw(stdscr, 21, 2, "Yet another OOSATO��(���������򲡤��Ʋ�������)");
+    mvwprintw(stdscr, 21, 2, "Yet another OOSATO！(何かキーを押して下さい。)");
     wrefresh(stdscr);
 
     mygetch();
@@ -549,7 +550,7 @@ static int mainloop( void )
   }
 
   /*
-  printf("\n̿���:%d\n",num);
+  printf("\n命題数:%d\n",num);
   printf("  A:%s(%s)\n  B:%s(%s)\n  C:%s(%s)\n  D:%s(%s)\n  E:%s(%s)\n",
 	 atomstr_ha[0], Answer[(int)(ConditionAtom[0])],
 	 atomstr_ha[1], Answer[(int)(ConditionAtom[1])],
@@ -560,30 +561,30 @@ static int mainloop( void )
   return 1;
 }
 
-/* ����̿��ꥹ�Ȥ���Ŭ����̿�������. idx�Ϻ��ޤǤ����򤵤줿��. */
+/* 原子命題リストから適当に命題を選択. idxは今までに選択された数. */
 static int set_atom( int idx )
 {
   int i;
 
   atom[idx] = rand() % ATOMSTRING_MAX;
 
-  /* ���Ǥ�����Ǥ��������Ӥʤ����ʤ���Фʤ�ʤ�. */
+  /* すでに選んでた場合は選びなおさなければならない. */
   for( i = 0 ; i < idx ; i ++ )
     if( atom[i] == atom[idx] )return set_atom(idx);
 
-  /* ����̿��˴ؤ���ʸ�������� */
-  sprintf(atomstr_ga[idx], "%s��%s", 
+  /* 原子命題に関する文字列を作成 */
+  sprintf(atomstr_ga[idx], "%sが%s", 
 	  as_list[atom[idx]].subj, as_list[atom[idx]].pred);
-  sprintf(atomstr_ha[idx], "%s��%s", 
+  sprintf(atomstr_ha[idx], "%sは%s", 
 	  as_list[atom[idx]].subj, as_list[atom[idx]].pred);
-  sprintf(negatomstr_ga[idx], "%s��%s", 
+  sprintf(negatomstr_ga[idx], "%sが%s", 
 	  as_list[atom[idx]].subj, as_list[atom[idx]].neg_pred);
-  sprintf(negatomstr_ha[idx], "%s��%s", 
+  sprintf(negatomstr_ha[idx], "%sは%s", 
 	  as_list[atom[idx]].subj, as_list[atom[idx]].neg_pred);
   return 0;
 }
 
-/* ����٤⤷���ϥ�����ɽ��������. */
+/* 難易度もしくはスコア表示を選択. */
 static int SelectDifficulty( void )
 {
   int dif = Difficulty;
@@ -644,7 +645,7 @@ static int SelectDifficulty( void )
   return -1; /* cannot reach */
 }
 
-/* �����ȥ�ɽ�� */
+/* タイトル表示 */
 static int DrawTitle( void )
 {
   int i;
@@ -656,7 +657,7 @@ static int DrawTitle( void )
 
   wattron(stdscr,COLOR_PAIR(2));
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"��");
+    mvwprintw(stdscr,i,x,"大");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -665,7 +666,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"Τ");
+    mvwprintw(stdscr,i,x,"里");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -674,7 +675,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"��");
+    mvwprintw(stdscr,i,x,"く");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -683,7 +684,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"��");
+    mvwprintw(stdscr,i,x,"ん");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -692,7 +693,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"��");
+    mvwprintw(stdscr,i,x,"の");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -701,7 +702,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"ͫ");
+    mvwprintw(stdscr,i,x,"憂");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -710,7 +711,7 @@ static int DrawTitle( void )
   }
   x+=6;
   for(i=0;;i++){
-    mvwprintw(stdscr,i,x,"ݵ");
+    mvwprintw(stdscr,i,x,"鬱");
     wrefresh(stdscr);
     usleep(2000);
     if(i == 9)break;
@@ -731,7 +732,7 @@ static int DrawTitle( void )
   return 0;
 }
 
-/* ����ǥ��� */
+/* エンディング */
 static void PrintStaffs( void )
 {
   int i;
@@ -742,7 +743,7 @@ static void PrintStaffs( void )
 
   wattron(stdscr,COLOR_PAIR(2));
   for(i=22;;i--){
-    mvwprintw(stdscr,i,20,"��    Τ    ��    ��    ��    ͫ    ݵ");
+    mvwprintw(stdscr,i,20,"大    里    く    ん    の    憂    鬱");
     wrefresh(stdscr);
     usleep(2222);
     if(i == 3)break;
@@ -751,7 +752,7 @@ static void PrintStaffs( void )
   }
   wattroff(stdscr,COLOR_PAIR(2));
   for(i=22;;i--){
-    mvwprintw(stdscr,i,20,"    ��衦����ץ�����ࡧhenkma");
+    mvwprintw(stdscr,i,20,"    企画・製作・プログラム：henkma");
     wrefresh(stdscr);
     usleep(2800);
     if(i == 8)break;
@@ -759,7 +760,7 @@ static void PrintStaffs( void )
     wrefresh(stdscr);
   }
   for(i=22;;i--){
-    mvwprintw(stdscr,i,20,"   �����ѡ��Х���������Τ����,manduki");
+    mvwprintw(stdscr,i,20,"   スーパーバイザー：大里くん,manduki");
     wrefresh(stdscr);
     usleep(3000);
     if(i == 9)break;
@@ -767,7 +768,7 @@ static void PrintStaffs( void )
     wrefresh(stdscr);
   }
   for(i=22;;i--){
-    mvwprintw(stdscr,i,20,"         ������줿�͡���Τ����");
+    mvwprintw(stdscr,i,20,"         いじられた人：大里くん");
     wrefresh(stdscr);
     usleep(3300);
     if(i == 10)break;
@@ -775,7 +776,7 @@ static void PrintStaffs( void )
     wrefresh(stdscr);
   }
   for(i=22;;i--){
-    mvwprintw(stdscr,i,20,"       ���ڥ���륵�󥯥����ˣͣ�");
+    mvwprintw(stdscr,i,20,"       スペシャルサンクス：ＫＭＣ");
     wrefresh(stdscr);
     usleep(5700);
     if(i == 13)break;
@@ -783,7 +784,7 @@ static void PrintStaffs( void )
     wrefresh(stdscr);
   }
   for(i=22;;i--){
-    mvwprintw(stdscr,i,13,"�Ǹ�ޤǥץ쥤���Ʋ����äƤɤ��⤢�꤬�Ȥ��������ޤ���");
+    mvwprintw(stdscr,i,13,"最後までプレイして下さってどうもありがとうございます！");
     wrefresh(stdscr);
     usleep(8000);
     if(i == 15)break;
@@ -792,7 +793,7 @@ static void PrintStaffs( void )
   }
   for(i=22;;i--){
     wattron(stdscr,COLOR_PAIR(3));
-    mvwprintw(stdscr,i,21,"    ���ʤ�������Ψ�� %2d0%%�Ǥ�����    ", Correct_num);
+    mvwprintw(stdscr,i,21,"    あなたの正解率は %2d0%%でした。    ", Correct_num);
     wattroff(stdscr,COLOR_PAIR(3));
     wrefresh(stdscr);
     usleep(8000);
@@ -802,7 +803,7 @@ static void PrintStaffs( void )
   }
   for(i=22;;i--){
     wattron(stdscr,COLOR_PAIR(3));
-    mvwprintw(stdscr,i,21," ���ʤ��ι�������� %07d���Ǥ�����", ScoreSum);
+    mvwprintw(stdscr,i,21," あなたの合計得点は %07d点でした。", ScoreSum);
     wattroff(stdscr,COLOR_PAIR(3));
     wrefresh(stdscr);
     usleep(9000);
@@ -814,7 +815,7 @@ static void PrintStaffs( void )
 
 
   if(ScoreSum <= HighScore[9]){
-    mvwprintw(stdscr,20,21,"'Y'�򲡤��Ʋ������������ȥ�����ޤ���");
+    mvwprintw(stdscr,20,21,"'Y'を押して下さい。タイトルに戻ります。");
     wrefresh(stdscr);
 
     while(1){
@@ -823,7 +824,7 @@ static void PrintStaffs( void )
     }
   }
   else {
-    NewScore(ScoreSum); /* ��󥯥��󤷤���̾������ */
+    NewScore(ScoreSum); /* ランクインしたら名前入力 */
   }
   for(i=0; i < 22 ; i++ ){
     mvwprintw(stdscr, i,0,"                                                                                ");
@@ -832,7 +833,7 @@ static void PrintStaffs( void )
   
 }
 
-/* ����������ʥϥ�������ɽ��,  ��, ���ä� */
+/* えーかげんなハイスコア表示,  ま, いっか */
 static void PrintHighScore( void )
 {
   int i;
@@ -841,68 +842,68 @@ static void PrintHighScore( void )
   }
   wrefresh(stdscr);
 
-  mvwprintw(stdscr, 0,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr, 0,23,"壱番：%c%c%c%c %07d点"
 	    ,ScoreName[0][0]
 	    ,ScoreName[0][1]
 	    ,ScoreName[0][2]
 	    ,ScoreName[0][3]
 	    ,HighScore[0]);
-  mvwprintw(stdscr, 2,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr, 2,23,"弐番：%c%c%c%c %07d点"
 	    ,ScoreName[1][0]
 	    ,ScoreName[1][1]
 	    ,ScoreName[1][2]
 	    ,ScoreName[1][3]
 	    ,HighScore[1]);
-  mvwprintw(stdscr, 4,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr, 4,23,"参番：%c%c%c%c %07d点"
 	    ,ScoreName[2][0]
 	    ,ScoreName[2][1]
 	    ,ScoreName[2][2]
 	    ,ScoreName[2][3]
 	    ,HighScore[2]);
-  mvwprintw(stdscr, 6,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr, 6,23,"四番：%c%c%c%c %07d点"
 	    ,ScoreName[3][0]
 	    ,ScoreName[3][1]
 	    ,ScoreName[3][2]
 	    ,ScoreName[3][3]
 	    ,HighScore[3]);
-  mvwprintw(stdscr, 8,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr, 8,23,"五番：%c%c%c%c %07d点"
 	    ,ScoreName[4][0]
 	    ,ScoreName[4][1]
 	    ,ScoreName[4][2]
 	    ,ScoreName[4][3]
 	    ,HighScore[4]);
-  mvwprintw(stdscr,10,23,"ϻ�֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr,10,23,"六番：%c%c%c%c %07d点"
 	    ,ScoreName[5][0]
 	    ,ScoreName[5][1]
 	    ,ScoreName[5][2]
 	    ,ScoreName[5][3]
 	    ,HighScore[5]);
-  mvwprintw(stdscr,12,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr,12,23,"七番：%c%c%c%c %07d点"
 	    ,ScoreName[6][0]
 	    ,ScoreName[6][1]
 	    ,ScoreName[6][2]
 	    ,ScoreName[6][3]
 	    ,HighScore[6]);
-  mvwprintw(stdscr,14,23,"Ȭ�֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr,14,23,"八番：%c%c%c%c %07d点"
 	    ,ScoreName[7][0]
 	    ,ScoreName[7][1]
 	    ,ScoreName[7][2]
 	    ,ScoreName[7][3]
 	    ,HighScore[7]);
-  mvwprintw(stdscr,16,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr,16,23,"九番：%c%c%c%c %07d点"
 	    ,ScoreName[8][0]
 	    ,ScoreName[8][1]
 	    ,ScoreName[8][2]
 	    ,ScoreName[8][3]
 	    ,HighScore[8]);
-  mvwprintw(stdscr,18,23,"���֡�%c%c%c%c %07d��"
+  mvwprintw(stdscr,18,23,"捨番：%c%c%c%c %07d点"
 	    ,ScoreName[9][0]
 	    ,ScoreName[9][1]
 	    ,ScoreName[9][2]
 	    ,ScoreName[9][3]
 	    ,HighScore[9]);
 
-  mvwprintw(stdscr,21,40,"���������򲡤��Ʋ�������");
+  mvwprintw(stdscr,21,40,"何かキーを押して下さい。");
   wrefresh(stdscr);
 
   mygetch();
@@ -914,7 +915,7 @@ static void PrintHighScore( void )
   return;
 }
 
-/* ��󥭥󥰥���ȥ�Υ���å� */
+/* ランキングエントリのスワップ */
 static void SwapEntry(int a, int b)
 {
   int scoretmp;
@@ -931,7 +932,7 @@ static void SwapEntry(int a, int b)
   return;
 }
 
-/* "score.txt"��, ���ߤΥ�󥭥󥰾����� */
+/* "score.txt"に, 現在のランキング情報を書く */
 static void SetHighScore( void )
 {
   FILE* fp;
@@ -947,7 +948,7 @@ static void SetHighScore( void )
   return;
 }
 
-/* �������͡������� */
+/* スコアネーム入力 */
 static void NewScore(int score)
 {
   char name[4]="....";
@@ -955,12 +956,12 @@ static void NewScore(int score)
   int c;
 
   while(1){
-    mvwprintw(stdscr,20,21,"̾�����ϡ�%c%c%c%c"
+    mvwprintw(stdscr,20,21,"名前入力：%c%c%c%c"
 	      ,name[0],name[1],name[2],name[3]);
     wrefresh(stdscr);
     c=mygetch();
     if( c == CTRL_M )break;
-    if( c < 32 || c > 126 )continue; /* �ޤȤ�Ǥʤ�ʸ���ϵѲ� */
+    if( c < 32 || c > 126 )continue; /* まともでない文字は却下 */
     name[0]=name[1];
     name[1]=name[2];
     name[2]=name[3];
@@ -980,7 +981,7 @@ static void NewScore(int score)
   return;
 }
 
-/* "score.txt"����, ���ߤΥ�󥭥󥰾�����ɤ�. */
+/* "score.txt"から, 現在のランキング情報を読む. */
 static void GetHighScore( void )
 {
   char buff[99];
@@ -1004,7 +1005,8 @@ int main( void )
   int i;
   int tmp;
 
-  /* curses����� */
+  /* curses初期化 */
+  setlocale(LC_ALL, "");
   initscr();
   crmode();
   nonl();
@@ -1024,8 +1026,8 @@ int main( void )
   GetHighScore();
   while(1){
     DrawTitle();
-    Correct_num = 0; /* ����������� */
-    ScoreSum = 0; /* �����ι�� */
+    Correct_num = 0; /* 正答数初期化 */
+    ScoreSum = 0; /* 得点の合計 */
     for(Problem_num = 0 ; Problem_num < 10 ; Problem_num++){
       for( i = 0 ; i < ATOM_MAX ; i++ )(void)set_atom(i);
       (void)mainloop();
