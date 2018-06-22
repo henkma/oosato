@@ -1,7 +1,7 @@
 #ifndef __DEFINES_H__
 #define __DEFINES_H__
 
-/* cursesÍÑdefine */
+/* cursesç”¨define */
 #define CTRL_C 3
 #define CTRL_L 12
 #define CTRL_M 13
@@ -10,23 +10,23 @@
 #define CKEY_UP    259
 #define CKEY_DOWN  258
 
-/* ¸¶»ÒÌ¿Âê¿ô¤ÎºÇÂç */
+/* åŸå­å‘½é¡Œæ•°ã®æœ€å¤§ */
 #define ATOM_MAX 5
-/* Ì¿Âê¹½À®Ë¡ */
-#define A_IMP_B       0 /* A¢¿B    */
-#define A_OR_B        1 /* A¢ËB    */
-#define A_AND_B_IMP_C 2 /* A¢ÊB¢¿C */
-#define A_OR_B_IMP_C  3 /* A¢ËB¢¿C */
-#define PROPTYPE_MAX  4 /* ¹½À®Ë¡¤Î¿ô */
+/* å‘½é¡Œæ§‹æˆæ³• */
+#define A_IMP_B       0 /* AâŠƒB    */
+#define A_OR_B        1 /* Aâˆ¨B    */
+#define A_AND_B_IMP_C 2 /* Aâˆ§BâŠƒC */
+#define A_OR_B_IMP_C  3 /* Aâˆ¨BâŠƒC */
+#define PROPTYPE_MAX  4 /* æ§‹æˆæ³•ã®æ•° */
 
-#define STRLENMAX 999 /* Ê¸»úÎó¤ÎÄ¹¤µºÇÂç(Å¬Åö) */
+#define STRLENMAX 999 /* æ–‡å­—åˆ—ã®é•·ã•æœ€å¤§(é©å½“) */
 
-#define CONDITION_MAX 5 /* ¾ò·ï¿ô¤ÎºÇÂç */
+#define CONDITION_MAX 5 /* æ¡ä»¶æ•°ã®æœ€å¤§ */
 
-/* ¼°É¾²ÁÍÑdefine */
-#define UNCLEAR    0 /* Ì¤È½ÌÀ */
-#define ONLY_TRUE  1 /* ¿¿ */
-#define ONLY_FALSE 2 /* µ¶ */
-#define ANYWAY     3 /* ÉÔÄê(¤Ç¤¢¤ë¤³¤È¤¬³ÎÄê) */
+/* å¼è©•ä¾¡ç”¨define */
+#define UNCLEAR    0 /* æœªåˆ¤æ˜ */
+#define ONLY_TRUE  1 /* çœŸ */
+#define ONLY_FALSE 2 /* å½ */
+#define ANYWAY     3 /* ä¸å®š(ã§ã‚ã‚‹ã“ã¨ãŒç¢ºå®š) */
 
 #endif /* __DEFINES_H__ */

@@ -2,11 +2,11 @@
 #include "types.h"
 #include "prop.h"
 
-static char ConditionAtom[ATOM_MAX]; /* ¼°É¾²ÁÍÑÇÛÎó */
-static Prop Condition[CONDITION_MAX]; /* Á°Äó¾ò·ïÍÑÇÛÎó */
+static char ConditionAtom[ATOM_MAX]; /* å¼è©•ä¾¡ç”¨é…åˆ— */
+static Prop Condition[CONDITION_MAX]; /* å‰ææ¡ä»¶ç”¨é…åˆ— */
 
-/* ¤Ä¤Ş¤é¤Ê¤¤Á°ÄóÌ¿Âê¤Ç¤¢¤ë¤«¤É¤¦¤«. 
-   ¤Ä¤Ş¤é¤Ê¤¤¤È¤Ï, Ì·½â¤·¤Æ¤¤¤ë¤â¤Î, ¹±¿¿¤Ê¤â¤Î, ¾éÄ¹¤Ê¤â¤Î¤Î¤¤¤º¤ì¤« */
+/* ã¤ã¾ã‚‰ãªã„å‰æå‘½é¡Œã§ã‚ã‚‹ã‹ã©ã†ã‹. 
+   ã¤ã¾ã‚‰ãªã„ã¨ã¯, çŸ›ç›¾ã—ã¦ã„ã‚‹ã‚‚ã®, æ’çœŸãªã‚‚ã®, å†—é•·ãªã‚‚ã®ã®ã„ãšã‚Œã‹ */
 static int trivial(Prop arg)
 {
   if( arg.first.atom == arg.second.atom )return 1;
@@ -16,23 +16,23 @@ static int trivial(Prop arg)
   return 0;
 }
 
-/* ¸½ºßÁªÂò¤µ¤ì¤Æ¤¤¤ë¸¶»ÒÌ¿Âê¤«¤é, ¸¶»ÒÌ¿Âê¤â¤·¤¯¤Ï¤½¤ÎÈİÄê¤òºî¤ë */
+/* ç¾åœ¨é¸æŠã•ã‚Œã¦ã„ã‚‹åŸå­å‘½é¡Œã‹ã‚‰, åŸå­å‘½é¡Œã‚‚ã—ãã¯ãã®å¦å®šã‚’ä½œã‚‹ */
 static Prim make_prim()
 {
   Prim retval;
   retval.atom = rand() % ATOM_MAX;
-  if((rand() & (128+64)))retval.sign = 1; /* 75%¤Ï¹ÎÄê */
-  else retval.sign = -1;                  /* 25%¤ÏÈİÄê */
+  if((rand() & (128+64)))retval.sign = 1; /* 75%ã¯è‚¯å®š */
+  else retval.sign = -1;                  /* 25%ã¯å¦å®š */
   return retval;
 }
 
-/* ¾®¤µ¤ÊÌ¿Âê2¤Ä¤¬Åù¤·¤¤¤«¤É¤¦¤« */
+/* å°ã•ãªå‘½é¡Œ2ã¤ãŒç­‰ã—ã„ã‹ã©ã†ã‹ */
 static int primeq(Prim p1, Prim p2)
 {
   return ((p1.atom == p2.atom) && (p1.sign == p2.sign));
 }
 
-/* Ì¿Âê¤¬Åù¤·¤¤¤«¤É¤¦¤« */
+/* å‘½é¡ŒãŒç­‰ã—ã„ã‹ã©ã†ã‹ */
 static int propeq(Prop p1, Prop p2)
 {
   if( p1.proptype != p2.proptype )return 0;
@@ -49,7 +49,7 @@ static int propeq(Prop p1, Prop p2)
   return 0; /* cannot reach */
 }
 
-/* Á°Äó¾ò·ï¤È¤Ê¤ëÌ¿Âê¤òºî¤ë. °ú¿ôidx¤Ï, ¸½ºß¤¹¤Ç¤Ëºî¤Ã¤Æ¤¤¤ë¿ô */
+/* å‰ææ¡ä»¶ã¨ãªã‚‹å‘½é¡Œã‚’ä½œã‚‹. å¼•æ•°idxã¯, ç¾åœ¨ã™ã§ã«ä½œã£ã¦ã„ã‚‹æ•° */
 static Prop make_prop(int idx)
 {
   int i;
@@ -60,17 +60,17 @@ static Prop make_prop(int idx)
   retval.third = make_prim();
   retval.proptype = rand() % PROPTYPE_MAX;
 
-  /* ¤Ä¤Ş¤ó¤Ê¤¤Ì¿Âê¤Ïºî¤êÄ¾¤· */
+  /* ã¤ã¾ã‚“ãªã„å‘½é¡Œã¯ä½œã‚Šç›´ã— */
   if(trivial(retval))return make_prop(idx);
 
-  /* Á°¤ÈÆ±¤¸Ì¿Âê¤Ïºî¤êÄ¾¤· */
+  /* å‰ã¨åŒã˜å‘½é¡Œã¯ä½œã‚Šç›´ã— */
   for(i = 0 ; i < idx ; i++)
     if(propeq(Condition[i],retval))return make_prop(idx);
 
   return retval;
 }
 
-/* »ØÄê¤µ¤ì¤¿¿ô¤À¤±Á°ÄóÌ¿Âê¤ò¹½À®¤¹¤ë */
+/* æŒ‡å®šã•ã‚ŒãŸæ•°ã ã‘å‰æå‘½é¡Œã‚’æ§‹æˆã™ã‚‹ */
 void make_question( int num, Prop* conditionlist )
 {
   int i;
@@ -104,8 +104,8 @@ static int testprop_aux(Prim prm, int a, int b, int c, int d, int e)
   return 0; /* cannot reach */
 }
 
-/* ³Æ¸¶»ÒÌ¿Âê¤Î¿¿µ¶¤òÅÏ¤·, ¤½¤ì¤Çconsistent¤«¤É¤¦¤«Ä´¤Ù¤ë.
-   num¤ÏÁ°ÄóÌ¿Âê¤Î¿ô. */
+/* å„åŸå­å‘½é¡Œã®çœŸå½ã‚’æ¸¡ã—, ãã‚Œã§consistentã‹ã©ã†ã‹èª¿ã¹ã‚‹.
+   numã¯å‰æå‘½é¡Œã®æ•°. */
 int testprop( int a, int b, int c, int d, int e, int num, Prop* proplist )
 {
   int i;
@@ -134,8 +134,8 @@ int testprop( int a, int b, int c, int d, int e, int num, Prop* proplist )
   return 1;
 }
 
-/* ¼°¤ÎÉ¾²Á¤Ë¤è¤ê, ¾ğÊó¤ò¾Ü¤·¤¯¤·¤Æ¤¤¤¯´Ø¿ô 
-   big¤Ï, atm¤Î¿¿µ¶¤òÉ½¤¹¥Ó¥Ã¥È¤È¤·¤Æ¸«¤ë. */
+/* å¼ã®è©•ä¾¡ã«ã‚ˆã‚Š, æƒ…å ±ã‚’è©³ã—ãã—ã¦ã„ãé–¢æ•° 
+   bigã¯, atmã®çœŸå½ã‚’è¡¨ã™ãƒ“ãƒƒãƒˆã¨ã—ã¦è¦‹ã‚‹. */
 static void set_conditionatom(int big, int atm)
 {
   if( ConditionAtom[atm] == ANYWAY )return;
@@ -156,13 +156,13 @@ static void set_conditionatom(int big, int atm)
   return;
 }
 
-/* Á´¤Æ¤Î¾ì¹ç¤ò¹Í¤¨¤Æ¤ß¤Æ, Àµ¤·¤¤²òÅú¤òConditionAtom¤Ë¥»¥Ã¥È¤¹¤ë.
-   ¤³¤ì¤ò¸Æ¤ó¤À¸å¤Ï¤¹¤°¤Ëget_answer¤ò¸Æ¤Ö¤Ù¤­. */
+/* å…¨ã¦ã®å ´åˆã‚’è€ƒãˆã¦ã¿ã¦, æ­£ã—ã„è§£ç­”ã‚’ConditionAtomã«ã‚»ãƒƒãƒˆã™ã‚‹.
+   ã“ã‚Œã‚’å‘¼ã‚“ã å¾Œã¯ã™ãã«get_answerã‚’å‘¼ã¶ã¹ã. */
 void make_answer( int num , Prop* proplist )
 {
   int i;
 
-  for(i=0; i < ATOM_MAX ; i++ )ConditionAtom[i]=UNCLEAR; /* ¥ê¥»¥Ã¥È */
+  for(i=0; i < ATOM_MAX ; i++ )ConditionAtom[i]=UNCLEAR; /* ãƒªã‚»ãƒƒãƒˆ */
 
   for(i=0; i < 1 << ATOM_MAX ; i++ ){
     if( testprop( i & 1 , i & 2 , i & 4 , i & 8 , i & 16, num, proplist) ){
@@ -176,7 +176,7 @@ void make_answer( int num , Prop* proplist )
   return;
 }
 
-/* Ì¿Âêprp¤Ë, ¸¶»ÒÌ¿Âêidx¤¬»È¤ï¤ì¤Æ¤¤¤ë¤«¤É¤¦¤«¤òÄ´¤Ù¤ë */
+/* å‘½é¡Œprpã«, åŸå­å‘½é¡ŒidxãŒä½¿ã‚ã‚Œã¦ã„ã‚‹ã‹ã©ã†ã‹ã‚’èª¿ã¹ã‚‹ */
 int is_there(int idx, Prop prp)
 {
   if(prp.first.atom == idx || prp.second.atom == idx)return 1;
@@ -185,8 +185,8 @@ int is_there(int idx, Prop prp)
   return 0;
 }
 
-/* static char ConditionAtom[] ¤ÎÆâÍÆ¤òarg¤ÎÃæ¿È¤Ë½ñ¤¯.
-   ÉÔÄê¤Ç¤Ê¤¤¤â¤Î¤Î¿ô¤òÊÖ¤¹. */
+/* static char ConditionAtom[] ã®å†…å®¹ã‚’argã®ä¸­èº«ã«æ›¸ã.
+   ä¸å®šã§ãªã„ã‚‚ã®ã®æ•°ã‚’è¿”ã™. */
 int get_answer(char* arg)
 {
   int i;

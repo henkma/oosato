@@ -1,18 +1,18 @@
 #ifndef __TYPES_H__
 #define __TYPES_H__
 
-/* ¸¶»ÒÌ¿Âê, ¤â¤·¤¯¤Ï¤½¤ÎÈİÄê */
+/* åŸå­å‘½é¡Œ, ã‚‚ã—ãã¯ãã®å¦å®š */
 typedef struct Prim {
-  int atom; /* ¸¶»ÒÌ¿Âêid */
-  int sign; /* Éä¹æ,-1¤Ş¤¿¤Ï+1 */
+  int atom; /* åŸå­å‘½é¡Œid */
+  int sign; /* ç¬¦å·,-1ã¾ãŸã¯+1 */
 }Prim;
 
-/* Ì¿Âê */
+/* å‘½é¡Œ */
 typedef struct Prop {
-  int proptype; /* Ì¿Âê¤Î¹½À®¥¿¥¤¥× */
-  Prim first;   /* Âè°ì¹½À®Í×ÁÇ(A) */
-  Prim second;  /* ÂèÆó¹½À®Í×ÁÇ(B) */
-  Prim third;   /* Âè»°¹½À®Í×ÁÇ(C) ¤³¤ì¤Ï»È¤ï¤Ê¤¤¤È¤­¤â¤¢¤ë */
+  int proptype; /* å‘½é¡Œã®æ§‹æˆã‚¿ã‚¤ãƒ— */
+  Prim first;   /* ç¬¬ä¸€æ§‹æˆè¦ç´ (A) */
+  Prim second;  /* ç¬¬äºŒæ§‹æˆè¦ç´ (B) */
+  Prim third;   /* ç¬¬ä¸‰æ§‹æˆè¦ç´ (C) ã“ã‚Œã¯ä½¿ã‚ãªã„ã¨ãã‚‚ã‚ã‚‹ */
 }Prop;
 
 #endif /* __TYPES_H__ */
